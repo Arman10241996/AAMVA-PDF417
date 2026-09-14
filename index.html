@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#235fe3">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="AAMVA v8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>AAMVA v8 PDF417 Full Field Workbench</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="installBanner" class="install-banner">
+  <div>
+    <strong>Install on iPhone</strong>
+    <span>Open in Safari → Share → Add to Home Screen</span>
+  </div>
+  <button id="dismissInstall" type="button" aria-label="Dismiss install instructions">×</button>
+</div>
+<main class="shell">
+  <header class="hero">
+    <div>
+      <div class="eyebrow">AAMVA PDF417 • VERSION 08</div>
+      <h1>AAMVA v8 Full Field Workbench</h1>
+      <p>Complete field editor, payload builder, inspector, and real PDF417 renderer.</p>
+    </div>
+    <div class="version-card"><strong>08</strong><span>AAMVA version</span></div>
+  </header>
+
+  <div class="notice">
+    Full AAMVA v8 field editing is enabled. This build uses scanner-oriented DL field ordering and a separate ZC test subfile so decoded results display like the reference scan. QA/test identifiers remain editable and are not state-issued credentials.
+  </div>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="builder">Builder</button>
+    <button class="tab" data-tab="subfiles">Subfiles</button>
+    <button class="tab" data-tab="raw">Raw payload</button>
+    <button class="tab" data-tab="inspect">Inspector</button>
+  </nav>
+
+  <section id="builder" class="tabpage active">
+    <div class="grid2">
+      <div class="panel">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">D1</div>
+            <h2>Header components</h2>
+          </div>
+          <span class="count">4 / 4</span>
+        </div>
+
+        <div class="form-grid">
+          <label>Jurisdiction QA preset
+            <select id="jurPreset">
+              <option value="generic">Generic AAMVA v8</option>
+              <option value="ca" selected>California QA profile</option>
+            </select>
+          </label>
+          <label>Issuer Identification Number
+            <input id="iin" value="000000" inputmode="numeric" maxlength="6">
+            <small>Six digits. Official production issuer presets are not embedded.</small>
+          </label>
+          <label>AAMVA Version Number
+            <input id="aamvaVersion" value="08" disabled>
+          </label>
+          <label>Jurisdiction Version Number
+            <input id="jurVersion" value="01" inputmode="numeric" maxlength="2">
+          </label>
+          <label>Number of Entries
+            <input id="entryCount" value="01" disabled>
+            <small>Calculated from active subfiles.</small>
+          </label>
+        </div>
+
+        <div class="section-head spaced">
+          <div>
+            <div class="section-kicker">D3</div>
+            <h2>Mandatory components</h2>
+          </div>
+          <span class="count">22 / 22</span>
+        </div>
+
+        <div id="mandatoryFields" class="field-list"></div>
+
+        <div class="section-head spaced">
+          <div>
+            <div class="section-kicker">D4</div>
+            <h2>Optional components</h2>
+          </div>
+          <span class="count">28</span>
+        </div>
+
+        <div id="optionalFields" class="field-list"></div>
+
+        <div class="section-head spaced">
+          <div>
+            <div class="section-kicker">JS</div>
+            <h2>Jurisdiction-specific components</h2>
+          </div>
+          <button id="addJurFieldBtn" type="button">+ Add field</button>
+        </div>
+        <p class="hint">Choose a 3-character field ID and enter its value. These fields are appended to the main subfile.</p>
+        <div id="jurFields" class="jur-fields"></div>
+
+        <div class="actions">
+          <button id="generateBtn" class="primary" type="button">Generate PDF417</button>
+          <button id="resetBtn" type="button">Reset sample</button>
+          <button id="copyRawBtn" type="button">Copy raw payload</button>
+        </div>
+        <div id="status" class="status">Loading barcode engine…</div>
+      </div>
+
+      <div class="panel stickyish">
+        <div class="panel-title">
+          <h2>PDF417 output</h2>
+          <div class="actions compact">
+            <button id="downloadBtn" type="button" disabled>PNG</button>
+            <button id="printBtn" type="button" disabled>Print</button>
+          </div>
+        </div>
+
+        <div class="barcode-box"><canvas id="barcodeCanvas"></canvas></div>
+
+        <div class="metrics">
+          <div><span>AAMVA version</span><strong>08</strong></div>
+          <div><span>Entries</span><strong id="entriesMetric">—</strong></div>
+          <div><span>Total bytes</span><strong id="totalMetric">—</strong></div>
+          <div><span>Primary subfile</span><strong id="primaryMetric">—</strong></div>
+        </div>
+
+        <h3>Validation</h3>
+        <ul id="validationList" class="validation"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="subfiles" class="tabpage">
+    <div class="panel">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">D2</div>
+          <h2>Subfile types</h2>
+        </div>
+        <span class="count">up to 5</span>
+      </div>
+
+      <p class="hint">The first subfile contains the AAMVA data elements from the Builder. Additional subfiles can carry custom data. Offsets and lengths are calculated automatically.</p>
+
+      <div id="subfileRows" class="subfile-list"></div>
+    </div>
+  </section>
+
+  <section id="raw" class="tabpage">
+    <div class="panel">
+      <div class="panel-title">
+        <h2>Raw AAMVA payload</h2>
+        <div class="actions compact">
+          <button id="rebuildRawBtn" type="button">Rebuild from fields</button>
+          <button id="renderRawBtn" class="primary" type="button">Render raw payload</button>
+        </div>
+      </div>
+      <p class="hint">Control characters are displayed as <code>&lt;LF&gt;</code>, <code>&lt;RS&gt;</code>, and <code>&lt;CR&gt;</code>.</p>
+      <textarea id="rawPayload" rows="28" spellcheck="false"></textarea>
+    </div>
+  </section>
+
+  <section id="inspect" class="tabpage">
+    <div class="grid2">
+      <div class="panel">
+        <h2>Header inspector</h2>
+        <div class="inspect-grid">
+          <div><span>Compliance indicator</span><strong id="iCompliance">—</strong></div>
+          <div><span>File type</span><strong id="iFileType">—</strong></div>
+          <div><span>IIN</span><strong id="iIIN">—</strong></div>
+          <div><span>AAMVA version</span><strong id="iVersion">—</strong></div>
+          <div><span>Jurisdiction version</span><strong id="iJurVersion">—</strong></div>
+          <div><span>Entry count</span><strong id="iEntries">—</strong></div>
+        </div>
+
+        <h3>Subfile inspector</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Type</th><th>Offset</th><th>Length</th></tr></thead>
+            <tbody id="subfileInspector"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Element inspector</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Value</th></tr></thead>
+            <tbody id="elementTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bwip-js@4.6.0/dist/bwip-js-min.js"></script>
+<script src="app.js"></script>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+    });
+  }
+
+  const installBanner = document.getElementById("installBanner");
+  const dismissInstall = document.getElementById("dismissInstall");
+
+  function isStandalone() {
+    return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  }
+
+  if (isStandalone() && installBanner) installBanner.style.display = "none";
+
+  if (dismissInstall) {
+    dismissInstall.addEventListener("click", () => {
+      installBanner.style.display = "none";
+    });
+  }
+</script>
+</body>
+</html>
