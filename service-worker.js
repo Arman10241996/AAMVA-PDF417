@@ -1,4 +1,4 @@
-const CACHE_NAME = "aamva-v8-pwa-v2";
+const CACHE_NAME = "aamva-v8-pwa-v4-autosync";
 const APP_SHELL = [
   "./",
   "./index.html",

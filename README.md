@@ -40,3 +40,7 @@ The app does not ship an official state production issuer profile or official ju
 
 ## iPhone / PWA
 This edition is installable as a Progressive Web App when hosted over HTTPS. See `INSTALL-IPHONE.md`.
+
+
+## Automatic ZC color synchronization
+The ZC jurisdiction color fields are generated automatically from the main form: DAY controls ZCZCA (eye color) and DAZ controls ZCB (hair color). Example: DAYBRO -> ZCZCABRN; DAYHAZ -> ZCZCAHZL; DAZBLK -> ZCBBLK; DAZBRO -> ZCBBRN.

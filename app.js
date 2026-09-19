@@ -65,11 +65,37 @@
 
   const subfiles = [
     {type:"DL", dataMode:"primary", custom:""},
-    {type:"ZC", dataMode:"custom", custom:"ZCAHZL\nZCBBRN\nZCC\nZCD"},
+    // ZC is generated dynamically from the selected eye/hair colors so it never goes stale.
+    {type:"ZC", dataMode:"auto-color", custom:"ZCC\nZCD"},
     {type:"", dataMode:"custom", custom:""},
     {type:"", dataMode:"custom", custom:""},
     {type:"", dataMode:"custom", custom:""}
   ];
+
+  function zcEyeCode(day){
+    const map={BLK:"BLK",BLU:"BLU",BRO:"BRN",GRN:"GRN",GRY:"GRY",HAZ:"HZL"};
+    return map[sanitize(day)] || sanitize(day);
+  }
+
+  function zcHairCode(daz){
+    const map={BLK:"BLK",BLN:"BLN",BRO:"BRN",GRY:"GRY",RED:"RED",WHI:"WHI"};
+    return map[sanitize(daz)] || sanitize(daz);
+  }
+
+  function buildZCBody(extra=""){
+    // Always derive jurisdiction color fields from the values entered above.
+    // DAY (eye color) -> ZCZCA..., DAZ (hair color) -> ZCB...
+    const eye = val("DAY");
+    const hair = val("DAZ");
+    const lines=[];
+    if(eye) lines.push("ZCA"+zcEyeCode(eye));
+    if(hair) lines.push("ZCB"+zcHairCode(hair));
+    String(extra||"").split(/\r?\n/).map(sanitize).filter(Boolean).forEach(line=>{
+      // Prevent manually-entered ZCA/ZCB values from overriding the synchronized ones.
+      if(!/^ZC[AB]/.test(line)) lines.push(line);
+    });
+    return lines.join(LF)+CR;
+  }
 
   function makeInput(def){
     const [id,desc,type,val]=def;
@@ -155,7 +181,10 @@
     let offset=fixed.length+designatorBytes;
 
     const payloadSubs=active.map((s,idx)=>{
-      const body=idx===0 ? buildPrimaryBody() : String(s.custom||"").split(/\r?\n/).map(sanitize).filter(Boolean).join(LF)+CR;
+      let body;
+      if(idx===0) body=buildPrimaryBody();
+      else if(s.type==="ZC" && s.dataMode==="auto-color") body=buildZCBody(s.custom);
+      else body=String(s.custom||"").split(/\r?\n/).map(sanitize).filter(Boolean).join(LF)+CR;
       const type=idx===0 ? (s.type || "DL") : s.type;
       const full=type+body;
       const item={type,offset,length:full.length,full};
@@ -183,8 +212,8 @@
       const lenLab=document.createElement("label"); lenLab.textContent="Length";
       const len=document.createElement("input"); len.className="auto"; len.disabled=true; len.id="sfLen"+i; len.value="0000"; lenLab.appendChild(len);
 
-      const dataLab=document.createElement("label"); dataLab.textContent=i===0?"Data":"Custom subfile data";
-      const data=document.createElement(i===0?"input":"textarea"); data.value=s.custom; data.disabled=i===0; data.placeholder=i===0?"Built from Builder fields":"One element per line (for example ZCAHZL)";
+      const dataLab=document.createElement("label"); dataLab.textContent=i===0?"Data":(s.dataMode==="auto-color"?"Extra ZC data (eye/hair auto-sync)":"Custom subfile data");
+      const data=document.createElement(i===0?"input":"textarea"); data.value=s.custom; data.disabled=i===0; data.placeholder=i===0?"Built from Builder fields":(s.dataMode==="auto-color"?"ZCA/ZCB are automatic; add extra ZC lines here":"One element per line");
       data.addEventListener("input",()=>{s.custom=data.value;updateAll()}); dataLab.appendChild(data);
 
       row.append(typeLab,offLab,lenLab,dataLab); c.appendChild(row);
